@@ -6,7 +6,7 @@
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-typedef enum { Open = 0, Closed, Held, Clicked } status_t;
+typedef enum { Open = 0, Closed, Held, Clicked, Released } status_t;
 
 class Button : Input {
 private:

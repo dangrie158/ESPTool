@@ -14,7 +14,7 @@ Button::Button(uint8_t pinNumber, bool internalPullupEnabled, bool activeLow)
 status_t Button::getStatus() {
   status_t status = mCurrentStatus;
   // only fire click event once
-  if (status == Clicked) {
+  if (status == Clicked || status == Released) {
     mCurrentStatus = Open;
   }
   return status;
@@ -38,7 +38,7 @@ void Button::update() {
     } else { // key is now up
       if (mKeyDownTicks) {
         if (this->mCurrentStatus == Held) {
-          this->mCurrentStatus = Open;
+          this->mCurrentStatus = Released;
         } else {
           this->mCurrentStatus = Clicked;
         }
