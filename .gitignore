@@ -1,3 +1,5 @@
+.pioenvs/
+
 # Backup files
 *.s#?
 *.b#?
