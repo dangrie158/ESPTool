@@ -86,7 +86,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println("lalalalala test");
 
-  buttonUpdater.attach_ms(1, updateButton);
+  buttonUpdater.attach_ms(10, updateButton);
 
   currentProcess->initialize();
 }

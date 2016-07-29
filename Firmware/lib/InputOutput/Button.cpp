@@ -23,27 +23,23 @@ status_t Button::getStatus() {
 void Button::update() {
   unsigned long now = millis();
 
-  if ((now - mLastButtonCheck) >=
-      ENC_BUTTONINTERVAL) // checking button is sufficient every 10-30ms
-  {
-    mLastButtonCheck = now;
+  mLastButtonCheck = now;
 
-    if (this->read()) { // key is down
-      mKeyDownTicks++;
-      if (mKeyDownTicks > (ENC_HOLDTIME / ENC_BUTTONINTERVAL)) {
-        this->mCurrentStatus = Held;
+  if (this->read()) { // key is down
+    mKeyDownTicks++;
+    if (mKeyDownTicks > (ENC_HOLDTIME / ENC_BUTTONINTERVAL)) {
+      this->mCurrentStatus = Held;
+    } else {
+      this->mCurrentStatus = Closed;
+    }
+  } else { // key is now up
+    if (mKeyDownTicks) {
+      if (this->mCurrentStatus == Held) {
+        this->mCurrentStatus = Released;
       } else {
-        this->mCurrentStatus = Closed;
+        this->mCurrentStatus = Clicked;
       }
-    } else { // key is now up
-      if (mKeyDownTicks) {
-        if (this->mCurrentStatus == Held) {
-          this->mCurrentStatus = Released;
-        } else {
-          this->mCurrentStatus = Clicked;
-        }
-        mKeyDownTicks = 0;
-      }
+      mKeyDownTicks = 0;
     }
   }
 }

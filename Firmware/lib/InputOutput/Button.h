@@ -6,13 +6,21 @@
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-typedef enum { Open = 0, Closed, Held, Clicked, Released } status_t;
+typedef enum {
+  Open = 0,
+  Closed,
+  Held,
+  Clicked,
+  Released,
+  DoubleClicked
+} status_t;
 
 class Button : Input {
 private:
   volatile status_t mCurrentStatus;
 
   uint16_t mKeyDownTicks;
+  uint16_t mDoubleClickTicks;
   unsigned long mLastButtonCheck;
 
 public:
