@@ -1,8 +1,8 @@
 #include "ListScreen.h"
 
-ListScreen::ListScreen(const String name, SSD1306 *display)
-    : Screen(name, display), mItems(new LinkedList<ListItem *>()),
-      mScrollOffset(0), mSelectedElementOnScreen(0) {}
+ListScreen::ListScreen(SSD1306 *display)
+    : Screen(display), mItems(new LinkedList<ListItem *>()), mScrollOffset(0),
+      mSelectedElementOnScreen(0) {}
 
 ListScreen::~ListScreen() {
   mItems->clear();

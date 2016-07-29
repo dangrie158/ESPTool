@@ -66,7 +66,7 @@ void drawStatusBar() {
   screenWidthLeft -= ICON_SDCARD_WIDTH + 4;
 
   // draw the current menu location
-  String currentScreenName = String("ESPToolalskdjlaskdjlas");
+  String currentScreenName = currentProcess->getName();
   while (display.getStringWidth(currentScreenName) > screenWidthLeft) {
     currentScreenName.remove(currentScreenName.length() - 4);
     currentScreenName += "...";

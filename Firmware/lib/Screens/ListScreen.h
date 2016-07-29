@@ -39,7 +39,7 @@ private:
   int mSelectedElementOnScreen;
 
 public:
-  ListScreen(const String name, SSD1306 *display);
+  ListScreen(SSD1306 *display);
   ~ListScreen();
   void draw();
   inline void addItem(ListItem *item) { mItems->push_back(item); }
@@ -50,6 +50,10 @@ public:
 
   bool cursorDown(int steps = 1);
   bool cursorUp(int steps = 1);
+
+  inline ListItem *getSelectedItem() {
+    return mItems->at(mScrollOffset + mSelectedElementOnScreen);
+  }
 };
 
 #endif //_LISTSCREEN_H_
