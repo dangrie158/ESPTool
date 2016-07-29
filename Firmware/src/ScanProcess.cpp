@@ -5,7 +5,7 @@
 #include "Process.h"
 
 ScanProcess::ScanProcess(SSD1306 *display)
-    : Process(PROCESS_NAME, new LoadingScreen(display, SCAN_MESSAGE)) {}
+    : Process(SCAN_PROCESS_NAME, new LoadingScreen(display, SCAN_MESSAGE)) {}
 
 void ScanProcess::initialize() {
   if (this->mScreen != NULL) {
@@ -48,8 +48,11 @@ void ScanProcess::fillList(int numberOfNetworks) {
   ListScreen *screen = static_cast<ListScreen *>(this->mScreen);
   for (int i = 0; i < numberOfNetworks; i++) {
     String ssid = WiFi.SSID(i);
-    String rssi = String(WiFi.RSSI(i)) + "dBm";
-    ListItem *item = new ListItem(ssid, String(i), true, rssi);
+    String encryptionScheme =
+        WiFi.encryptionType(i) == ENC_TYPE_NONE ? "  " : " *";
+    String rssi = String(WiFi.RSSI(i));
+    ListItem *item =
+        new ListItem(ssid, String(i), true, rssi + encryptionScheme);
     screen->addItem(item);
   }
   ListItem *rescan =
@@ -74,7 +77,9 @@ void ScanProcess::handleInput(button_t button, status_t action) {
         if (selectedItem->getReference() == RESCAN) {
           this->initialize();
         } else {
-          // ToDo: connect or whatever...
+          if (mCallback != NULL) {
+            mCallback(selectedItem->getReference().toInt());
+          }
         }
         break;
       }
