@@ -22,10 +22,11 @@ private:
   uint16_t mKeyDownTicks;
   uint16_t mDoubleClickTicks;
   unsigned long mLastButtonCheck;
+  bool mDoubleClickEnabled;
 
 public:
   Button(uint8_t pinNumber, bool internalPullupEnabled = false,
-         bool activeLow = false);
+         bool activeLow = false, bool doubleClickEnabled = false);
 
   status_t getStatus();
 
