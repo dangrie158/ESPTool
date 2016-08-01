@@ -4,6 +4,8 @@
 
 #include "AnalogInput.h"
 #include "Button.h"
+#include "ConnectProcess.h"
+#include "ESP8266WiFi.h"
 #include "SSD1306.h"
 #include "ScanProcess.h"
 
@@ -17,11 +19,10 @@ SSD1306 display(0x3C, 4, 5);
 AnalogInput batteryVoltage(VBAT_PIN, VBAT_MAX / ADC_MAX, 10);
 Button down(12, true, true);
 Button up(13, true, true);
-Button left(14, true, true);
+Button left(14, true, true, true);
 Ticker buttonUpdater;
 
 ScanProcess scanner(&display);
-
 Process *currentProcess = &scanner;
 
 void updateButton() {
@@ -89,23 +90,21 @@ void setup() {
   buttonUpdater.attach_ms(10, updateButton);
 
   currentProcess->initialize();
+
+  scanner.setCallback([currentProcess](int selectedLan) {
+    currentProcess = new ConnectProcess(&display, selectedLan);
+  });
 }
 
 void handleInput() {
   status_t status = up.getStatus();
-  if (status != Open) {
-    currentProcess->handleInput(Up, status);
-  }
+  currentProcess->handleInput(Up, status);
 
   status = down.getStatus();
-  if (status != Open) {
-    currentProcess->handleInput(Down, status);
-  }
+  currentProcess->handleInput(Down, status);
 
   status = left.getStatus();
-  if (status != Open) {
-    currentProcess->handleInput(Left, status);
-  }
+  currentProcess->handleInput(Left, status);
 }
 
 void loop() {
