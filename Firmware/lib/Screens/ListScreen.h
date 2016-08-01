@@ -37,16 +37,13 @@ private:
   LinkedList<ListItem *> *mItems;
   int mScrollOffset;
   int mSelectedElementOnScreen;
+  bool mSelectable;
 
 public:
-  ListScreen(SSD1306 *display);
+  ListScreen(SSD1306 *display, bool elementsAreSelectable = true);
   ~ListScreen();
   void draw();
   inline void addItem(ListItem *item) { mItems->push_back(item); }
-
-  /*inline void removeItem(int index) {
-    mItems->erase(mItems->begin() + index);
-  }*/
 
   bool cursorDown(int steps = 1);
   bool cursorUp(int steps = 1);
@@ -54,6 +51,8 @@ public:
   inline ListItem *getSelectedItem() {
     return mItems->at(mScrollOffset + mSelectedElementOnScreen);
   }
+
+  inline void setSelectable(bool isSelectable) { mSelectable = isSelectable; }
 };
 
 #endif //_LISTSCREEN_H_

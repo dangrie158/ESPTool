@@ -1,8 +1,14 @@
 #include "ListScreen.h"
 
-ListScreen::ListScreen(SSD1306 *display)
+ListScreen::ListScreen(SSD1306 *display, bool elementsAreSelectable)
     : Screen(display), mItems(new LinkedList<ListItem *>()), mScrollOffset(0),
-      mSelectedElementOnScreen(0) {}
+      mSelectedElementOnScreen(0), mSelectable(elementsAreSelectable) {
+  // invisibly "preselect" the last item on the screen if there is no cursor
+  // otherwise the list will scroll to far on non selectable lists
+  if (!mSelectable) {
+    mSelectedElementOnScreen = ITEMS_ON_SCREEN - 1;
+  }
+}
 
 ListScreen::~ListScreen() {
   mItems->clear();
@@ -46,18 +52,25 @@ void ListScreen::draw() {
     }
   }
 
-  mDisplay->setColor(INVERSE);
-  mDisplay->fillRect(SCREEN_START_X,
-                     SCREEN_START_Y + (mSelectedElementOnScreen * ITEM_HEIGHT) +
-                         LIST_OFFSET,
-                     SCREEN_WIDTH, ITEM_HEIGHT);
+  // draw the cursor only if the items are selectable
+  if (mSelectable) {
+    mDisplay->setColor(INVERSE);
+    mDisplay->fillRect(
+        SCREEN_START_X,
+        SCREEN_START_Y + (mSelectedElementOnScreen * ITEM_HEIGHT) + LIST_OFFSET,
+        SCREEN_WIDTH, ITEM_HEIGHT);
+  }
 }
 
 bool ListScreen::cursorDown(int steps) {
-  mSelectedElementOnScreen += steps;
-  if (mSelectedElementOnScreen >= ITEMS_ON_SCREEN) {
-    mScrollOffset += mSelectedElementOnScreen - (ITEMS_ON_SCREEN - 1);
-    mSelectedElementOnScreen = ITEMS_ON_SCREEN - 1;
+  if (mSelectable) {
+    mSelectedElementOnScreen += steps;
+    if (mSelectedElementOnScreen >= ITEMS_ON_SCREEN) {
+      mScrollOffset += mSelectedElementOnScreen - (ITEMS_ON_SCREEN - 1);
+      mSelectedElementOnScreen = ITEMS_ON_SCREEN - 1;
+    }
+  } else {
+    mScrollOffset += steps;
   }
 
   if ((mScrollOffset + mSelectedElementOnScreen) > mItems->size()) {
@@ -67,10 +80,14 @@ bool ListScreen::cursorDown(int steps) {
 }
 
 bool ListScreen::cursorUp(int steps) {
-  mSelectedElementOnScreen -= steps;
-  if (mSelectedElementOnScreen < 0) {
-    mScrollOffset += mSelectedElementOnScreen;
-    mSelectedElementOnScreen = 0;
+  if (mSelectable) {
+    mSelectedElementOnScreen -= steps;
+    if (mSelectedElementOnScreen < 0) {
+      mScrollOffset += mSelectedElementOnScreen;
+      mSelectedElementOnScreen = 0;
+    }
+  } else {
+    mScrollOffset -= steps;
   }
 
   if (mScrollOffset < 0) {
