@@ -28,6 +28,6 @@ void LoadingScreen::draw() {
 
   this->mDisplay->drawProgressBar(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, 8,
                                   progress);
-  this->mDisplay->drawString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 20,
+  this->mDisplay->drawString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 10,
                              mMessage);
 }
