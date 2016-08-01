@@ -12,18 +12,16 @@ void TextInputScreen::draw() {
   this->mDisplay->setFont(ArialMT_Plain_10);
   this->mDisplay->setTextAlignment(TEXT_ALIGN_CENTER);
 
-  this->mDisplay->drawString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2) + 20,
-                             mMessage);
+  this->mDisplay->drawString(SCREEN_WIDTH / 2, SCREEN_START_Y + 20, mMessage);
 
   // use a progressbar with 0 progress to easily draw a nice frame
-  this->mDisplay->drawProgressBar(0, SCREEN_HEIGHT / 2, SCREEN_WIDTH - 1, 16,
-                                  0);
+  this->mDisplay->drawProgressBar(0, SCREEN_START_Y, SCREEN_WIDTH - 1, 16, 0);
 
   // draw the current input
   this->mDisplay->setTextAlignment(TEXT_ALIGN_LEFT);
   int inputStartX = 8;
 
-  this->mDisplay->drawString(inputStartX, (SCREEN_HEIGHT / 2) + 1, mInput);
+  this->mDisplay->drawString(inputStartX, SCREEN_START_Y + 1, mInput);
 
   // draw the (blinking) cursor (0.5Hz)
   if ((millis() % 1000) > 500) {
@@ -34,7 +32,7 @@ void TextInputScreen::draw() {
         inputStartX + this->mDisplay->getStringWidth(inputToStartCurrentChar);
     int cursorEndX =
         inputStartX + this->mDisplay->getStringWidth(inputToEndCurrentChar);
-    this->mDisplay->fillRect(cursorStartX, (SCREEN_HEIGHT / 2) + 3,
+    this->mDisplay->fillRect(cursorStartX, SCREEN_START_Y + 3,
                              cursorEndX - cursorStartX, 12);
   }
 }
