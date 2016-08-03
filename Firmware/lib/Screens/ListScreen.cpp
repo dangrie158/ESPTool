@@ -75,7 +75,9 @@ bool ListScreen::cursorDown(int steps) {
 
   if ((mScrollOffset + mSelectedElementOnScreen) > mItems->size()) {
     mSelectedElementOnScreen = ITEMS_ON_SCREEN - 1;
-    mScrollOffset = mItems->size() - mSelectedElementOnScreen;
+    if (mSelectable) {
+      mScrollOffset = mItems->size() - mSelectedElementOnScreen;
+    }
   }
 }
 
@@ -92,6 +94,8 @@ bool ListScreen::cursorUp(int steps) {
 
   if (mScrollOffset < 0) {
     mScrollOffset = 0;
-    mSelectedElementOnScreen = 0;
+    if (mSelectable) {
+      mSelectedElementOnScreen = 0;
+    }
   }
 }
