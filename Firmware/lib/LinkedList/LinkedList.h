@@ -75,5 +75,30 @@ public:
       delete this->pop();
     }
   }
+
+  void del(T data) {
+    Node<T> *temp = this->mRoot;
+    if (temp == NULL) {
+      return NULL;
+    }
+
+    Node<T> *prev = NULL;
+
+    while (temp->next != NULL) {
+      if (temp->data == data) {
+        if (prev == NULL) {
+          Node<T> *next = temp->next;
+          delete mRoot;
+          mRoot = next;
+        } else {
+          prev->next = temp->next;
+          delete temp;
+        }
+        return;
+      }
+      prev = temp;
+      temp = temp->next;
+    }
+  }
 };
 #endif // _LINKEDLIST_H_
