@@ -13,18 +13,22 @@
 #define RESCAN "-1"
 
 class ScanProcess : public Process {
-private:
+protected:
   bool mScanComplete;
   void (*mCallback)(int);
+  SSD1306 *mDisplay;
+
+  void fillList(int);
 
 public:
   ScanProcess(SSD1306 *display);
   ~ScanProcess();
   void initialize();
   Process *update();
-  void handleInput(button_t button, status_t action);
-  void fillList(int);
+  virtual void handleInput(button_t button, status_t action);
   inline void setCallback(void (*callback)(int)) { mCallback = callback; }
+  void startScan();
+  virtual void showResult(int numNetworksDiscovered);
 };
 
 #endif // SCAN_PROCESS_H_

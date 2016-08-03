@@ -5,40 +5,46 @@
 #include "Process.h"
 
 ScanProcess::ScanProcess(SSD1306 *display)
-    : Process(SCAN_PROCESS_NAME, new LoadingScreen(display, SCAN_MESSAGE)) {}
+    : Process(SCAN_PROCESS_NAME, NULL), mDisplay(display) {}
 
-void ScanProcess::initialize() {
-  if (this->mScreen != NULL) {
-    Screen *tempSceen = this->mScreen;
-    this->mScreen = new LoadingScreen(tempSceen->getDisplay(), SCAN_MESSAGE);
-    delete tempSceen;
+ScanProcess::~ScanProcess() { delete mScreen; }
+
+void ScanProcess::initialize() { startScan(); }
+
+void ScanProcess::startScan() {
+  Screen *tempScreen = this->mScreen;
+  LoadingScreen *screen = new LoadingScreen(mDisplay, SCAN_MESSAGE);
+  this->mScreen = screen;
+  if (tempScreen != NULL) {
+    delete tempScreen;
   }
+
   mScanComplete = false;
   WiFi.mode(WIFI_STA);
   delay(100);
 
   WiFi.scanNetworks(true, true);
+  screen->setProgress(INDETERMINATE);
 }
 
-ScanProcess::~ScanProcess() { delete mScreen; }
+void ScanProcess::showResult(int numNetworksDiscovered) {
+  // switch to a new ListScreen to show the result
+  Screen *oldScreen = this->mScreen;
+  this->mScreen = new ListScreen(oldScreen->getDisplay());
+  delete oldScreen;
+
+  // fill the list
+  fillList(numNetworksDiscovered);
+}
 
 Process *ScanProcess::update() {
   int scanStatus = WiFi.scanComplete();
   if (scanStatus >= 0 && !mScanComplete) {
-    // switch to a new ListScreen to show the result
-    Screen *oldScreen = this->mScreen;
-    this->mScreen = new ListScreen(oldScreen->getDisplay());
-    delete oldScreen;
-
-    // fill the list
-    fillList(scanStatus);
+    showResult(scanStatus);
     mScanComplete = true;
   } else if (scanStatus == WIFI_SCAN_FAILED) {
 
   } else if (scanStatus == WIFI_SCAN_RUNNING) {
-    LoadingScreen *screen = static_cast<LoadingScreen *>(this->mScreen);
-
-    screen->setProgress(INDETERMINATE);
   }
 
   mScreen->draw();
