@@ -1,7 +1,9 @@
 #ifndef _LINKEDLIST_H_
 #define _LINKEDLIST_H_
 
-#include "Arduino.h"
+#ifndef NULL
+#include "cstddef"
+#endif
 
 template <typename T> class Node {
 public:
@@ -16,6 +18,7 @@ private:
   Node<T> *mRoot;
 
 public:
+  LinkedList<T>() : mRoot(NULL) {}
   void push_back(T data) {
     if (this->mRoot == NULL) {
       this->mRoot = new Node<T>(data);
@@ -79,13 +82,13 @@ public:
   void del(T data) {
     Node<T> *temp = this->mRoot;
     if (temp == NULL) {
-      return NULL;
+      return;
     }
 
     Node<T> *prev = NULL;
 
     while (temp->next != NULL) {
-      if (temp->data == data) {
+      if (temp->value == data) {
         if (prev == NULL) {
           Node<T> *next = temp->next;
           delete mRoot;
