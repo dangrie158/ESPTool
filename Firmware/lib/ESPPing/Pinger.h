@@ -11,10 +11,14 @@
 #include "lwip/sys.h"
 #include "lwip/timers.h"
 
+#include "LinkedList.h"
+
 // the timeout for a single ping request
 #define PING_DELAY 1000
 
 #define PING_DATA_SIZE 32
+
+#define PING_ID 0xABAB
 
 class Pinger;
 
@@ -29,16 +33,16 @@ private:
   struct raw_pcb *mPingPcb;
   ip_addr_t mIpAddr;
   u16_t mPingSeqNum;
+  u16_t mCurrentId;
   void (*mCallback)(u16_t seqNum, bool didRespond);
-  bool *mCurrentPings;
+  LinkedList<ping_id_t *> *mCurrentPings;
   u16_t mMaxSimPings;
   sys_mutex_t mMutex;
-  u16_t mCurrentId;
 
   static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
                         ip_addr_t *addr);
   static void ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
-                                u16_t seqNo, u16_t id);
+                                u16_t seqNo);
   static void ping_timeout(void *arg);
 
 public:
@@ -48,6 +52,8 @@ public:
   ~Pinger();
   err_t initialize();
   u16_t send();
+  ping_id_t *getPingBySeqNo(u16_t seqNo);
+  ping_id_t *getPingById(u16_t id);
   inline void setCallback(void (*cb)(u16_t seqNum, bool receivedPong)) {
     mCallback = cb;
   }

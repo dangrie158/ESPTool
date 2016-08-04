@@ -2,26 +2,22 @@
 Pinger::Pinger(ip_addr_t ipAddr, u16_t maxSimultaneousPings)
     : mIpAddr(ipAddr), mPingSeqNum(0), mCallback(NULL),
       mMaxSimPings(maxSimultaneousPings),
-      mCurrentPings(new bool[maxSimultaneousPings]), mCurrentId(0) {}
+      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0) {}
 
 Pinger::Pinger(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4,
                u16_t maxSimultaneousPings)
     : mPingSeqNum(0), mCallback(NULL), mMaxSimPings(maxSimultaneousPings),
-      mCurrentPings(new bool[maxSimultaneousPings]), mCurrentId(0) {
+      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0) {
   IP4_ADDR(&mIpAddr, ip1, ip2, ip3, ip4);
 }
 
 Pinger::~Pinger() {
-  delete[] mCurrentPings;
+  delete mCurrentPings;
   sys_mutex_free(&mMutex);
 }
 
 err_t Pinger::initialize() {
   err_t error = ERR_OK;
-  // 0 initialize all values
-  for (int i = 0; i < mMaxSimPings; i++) {
-    mCurrentPings[i] = false;
-  }
 
   // create a new raw ip control block
   mPingPcb = raw_new(IP_PROTO_ICMP);
@@ -61,16 +57,19 @@ u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
     sys_mutex_lock(&mMutex);
 
     // check if we have an outstanding response for this sequence number
-    if (self->mCurrentPings[echoId] != false) {
+    ping_id_t *ping = self->getPingBySeqNo(seqNo);
+    if (ping != NULL) {
 
       // call the callback
       if (self->mCallback != NULL) {
         self->mCallback(seqNo, true);
       }
 
-      // reset the state for this sequence number to avoid the timeout from
-      // calling back
-      self->mCurrentPings[echoId] = false;
+      // clear the timeout
+      sys_untimeout(ping_timeout, ping);
+      // clean up for this ping
+      self->mCurrentPings->del(ping);
+      delete ping;
     }
     // unock the mutex
     sys_mutex_unlock(&mMutex);
@@ -85,8 +84,34 @@ u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
   return 0;
 }
 
+ping_id_t *Pinger::getPingBySeqNo(u16_t seqNo) {
+  u16_t i = 0;
+  ping_id_t *currentPing = this->mCurrentPings->at(i);
+
+  while (currentPing != NULL) {
+    if (currentPing->seqNum == seqNo) {
+      return currentPing;
+    }
+    currentPing = this->mCurrentPings->at(++i);
+  }
+  return currentPing;
+}
+
+ping_id_t *Pinger::getPingById(u16_t id) {
+  u16_t i = 0;
+  ping_id_t *currentPing = this->mCurrentPings->at(i);
+
+  while (currentPing != NULL) {
+    if (currentPing->id == id) {
+      return currentPing;
+    }
+    currentPing = this->mCurrentPings->at(++i);
+  }
+  return currentPing;
+}
+
 void Pinger::ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
-                               u16_t seqNo, u16_t id) {
+                               u16_t seqNo) {
   size_t i;
   size_t data_len = len - sizeof(struct icmp_echo_hdr);
 
@@ -94,7 +119,7 @@ void Pinger::ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
   ICMPH_TYPE_SET(iecho, ICMP_ECHO);
   ICMPH_CODE_SET(iecho, 0);
   iecho->chksum = 0;
-  iecho->id = id;
+  iecho->id = PING_ID;
   iecho->seqno = htons(seqNo);
 
   // fill the additional data buffer with some data
@@ -107,66 +132,72 @@ void Pinger::ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
 }
 
 u16_t Pinger::send() {
-  struct pbuf *p;
   struct icmp_echo_hdr *iecho;
   size_t ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
 
-  // allocate a new packet buffer
-  p = pbuf_alloc(PBUF_IP, (u16_t)ping_size, PBUF_RAM);
-  if (!p) {
+  u16_t seqNo = -1;
+
+  // calculate the next sequence number
+  u16_t nextSeqNo = this->mPingSeqNum + 1;
+
+  u16_t nextId = this->mCurrentId;
+  int freeSlots = this->mMaxSimPings;
+  ping_id_t *ping = NULL;
+  do {
+    nextId += 1;
+    nextId %= mMaxSimPings;
+    ping = this->getPingById(nextId);
+  } while (ping != NULL && --freeSlots);
+
+  // if the sequence number is currently in use, we have no more free pings
+  // available, another ping has to respond or timeout first.
+  if (ping != NULL) {
     return -1;
   }
 
-  u16_t seqNo = -1;
+  sys_mutex_lock(&mMutex);
 
+  // allocate a new packet buffer
+  struct pbuf *p;
+  p = pbuf_alloc(PBUF_IP, (u16_t)ping_size, PBUF_RAM);
+  if (!p) {
+    pbuf_free(p);
+    return -1;
+  }
   if ((p->len == p->tot_len) && (p->next == NULL)) {
-
-    // calculate the next sequence number
-    u16_t nextId = this->mCurrentId + 1;
-    nextId %= mMaxSimPings;
-
-    // if the sequence number is currently in use, we have no more free pings
-    // available, another ping has to respond or timeout first.
-    sys_mutex_lock(&mMutex);
-    if (mCurrentPings[nextId] == true) {
-      pbuf_free(p);
-      return -1;
-    }
-
-    // mark the current sequence number as not available
-    mCurrentPings[nextId] = true;
-
-    sys_mutex_unlock(&mMutex);
-
-    // set the next sequence number
-    this->mCurrentId = nextId;
-
-    // increment the sequence number
-    u16_t seqNo = ++this->mPingSeqNum;
-
-    // get the data field of the ip packet
-    iecho = (struct icmp_echo_hdr *)p->payload;
-
-    // prepare the ICMP Echo Request
-    Pinger::ping_prepare_echo(iecho, (u16_t)ping_size, seqNo, nextId);
-
-    // send the request
-    raw_sendto(mPingPcb, p, &mIpAddr);
 
     // create a new ping_id_t for the timeout callback to pass
     ping_id_t *id = new ping_id_t;
     id->pinger = this;
     id->id = nextId;
-    id->seqNum = seqNo;
+    id->seqNum = nextSeqNo;
+    this->mCurrentId = nextId;
+
+    // mark the current sequence number as not available
+    mCurrentPings->push_back(id);
+
+    sys_mutex_unlock(&mMutex);
+
+    // increment the sequence number
+    this->mPingSeqNum = nextSeqNo;
+
+    // get the data field of the ip packet
+    iecho = (struct icmp_echo_hdr *)p->payload;
+
+    // prepare the ICMP Echo Request
+    Pinger::ping_prepare_echo(iecho, (u16_t)ping_size, nextSeqNo);
 
     // register the timeout
     sys_timeout(PING_DELAY, ping_timeout, id);
 
+    // send the request
+    raw_sendto(mPingPcb, p, &mIpAddr);
+
     // set the return value;
     seqNo = this->mPingSeqNum;
-  }
 
-  // free the packet buffer
+    // free the packet buffer
+  }
   pbuf_free(p);
 
   return seqNo;
@@ -177,12 +208,12 @@ void Pinger::ping_timeout(void *arg) {
   ping_id_t *id = static_cast<ping_id_t *>(arg);
 
   Pinger *pinger = id->pinger;
-  u16_t idNum = id->id;
   u16_t seqNo = id->seqNum;
 
   // lock the mutex before checking the state
   sys_mutex_lock(&mMutex);
-  if (pinger->mCurrentPings[idNum] == true) {
+  ping_id_t *ping = pinger->getPingBySeqNo(seqNo);
+  if (ping != NULL) {
 
     // call the callback
     if (pinger->mCallback != NULL) {
@@ -190,12 +221,10 @@ void Pinger::ping_timeout(void *arg) {
     }
 
     // free the state of the current sequence number
-    pinger->mCurrentPings[idNum] = false;
+    pinger->mCurrentPings->del(ping);
+    delete ping;
   }
 
   // free the mutex again
   sys_mutex_unlock(&mMutex);
-
-  // free the memry of the ping_id_t
-  delete id;
 }
