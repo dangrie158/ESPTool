@@ -36,6 +36,7 @@ err_t Pinger::initialize() {
 u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
                        ip_addr_t *addr) {
   struct icmp_echo_hdr *iecho;
+  u32_t recvTime = sys_now();
 
   // the Pinger is set as recv_arg while registering the receive callback
   Pinger *self = static_cast<Pinger *>(pcb->recv_arg);
@@ -60,9 +61,11 @@ u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
     ping_id_t *ping = self->getPingBySeqNo(seqNo);
     if (ping != NULL) {
 
+      u32_t responseTime = recvTime - ping->pingTime;
+
       // call the callback
       if (self->mCallback != NULL) {
-        self->mCallback(seqNo, true);
+        self->mCallback(seqNo, true, responseTime, self->mCallback);
       }
 
       // clear the timeout
@@ -191,6 +194,7 @@ u16_t Pinger::send() {
     sys_timeout(PING_DELAY, ping_timeout, id);
 
     // send the request
+    id->pingTime = sys_now();
     raw_sendto(mPingPcb, p, &mIpAddr);
 
     // set the return value;
@@ -217,7 +221,7 @@ void Pinger::ping_timeout(void *arg) {
 
     // call the callback
     if (pinger->mCallback != NULL) {
-      pinger->mCallback(seqNo, false);
+      pinger->mCallback(seqNo, false, -1, pinger->mCallbackArg);
     }
 
     // free the state of the current sequence number

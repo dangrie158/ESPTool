@@ -26,6 +26,7 @@ typedef struct {
   u16_t id;
   u16_t seqNum;
   Pinger *pinger;
+  u32_t pingTime;
 } ping_id_t;
 
 class Pinger {
