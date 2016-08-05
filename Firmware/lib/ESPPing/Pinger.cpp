@@ -67,7 +67,7 @@ u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
 
       // call the callback
       if (self->mCallback != NULL) {
-        self->mCallback(seqNo, true, responseTime, self->mCallback);
+        self->mCallback(seqNo, true, responseTime, self->mCallbackArg);
       }
 
       // clear the timeout
