@@ -14,7 +14,6 @@
 
 class TextInputScreen : public Screen {
 private:
-  int mProgress;
   const String mMessage;
   String mInput;
   int mCurrentCharPos;
@@ -25,6 +24,10 @@ public:
   void draw();
 
   inline String getInputString() { return mInput; }
+  inline String setInputString(const String &text) {
+    mInput = text;
+    mCurrentCharPos = text.length() - 1;
+  }
 
   inline void nextChar() {
     // duplicate the last char, that makes the input easier
