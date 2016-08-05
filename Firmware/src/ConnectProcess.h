@@ -13,7 +13,13 @@
 // message displayed while connecting (the ssid is appended at runtime)
 #define CONNECTING_MESSAGE "connecting to"
 
-typedef enum { UNKNOWN, PROMPTING, CONNECTING, CONNECTED } connect_status_t;
+typedef enum {
+  UNKNOWN,
+  PROMPTING,
+  CONNECTING,
+  CONNECTED,
+  FAILED
+} connect_status_t;
 
 class ConnectProcess : public Process {
 private:
@@ -25,6 +31,7 @@ private:
   void promptForPassword();
   void connectToWiFi(const String &passphrase);
   void showConnectedSummary();
+  void showConnectionError();
 
 public:
   ConnectProcess(SSD1306 *display, int wlanNumberFromScan);

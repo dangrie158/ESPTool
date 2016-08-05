@@ -1,7 +1,9 @@
 #include "ConnectProcess.h"
+#include "CredentialCache.h"
 #include "ESP8266WiFi.h"
 #include "ListScreen.h"
 #include "LoadingScreen.h"
+#include "MessageScreen.h"
 #include "Process.h"
 #include "TextInputScreen.h"
 
@@ -13,20 +15,37 @@ ConnectProcess::ConnectProcess(SSD1306 *display, int wlanNumberFromScan)
 }
 
 void ConnectProcess::initialize() {
+  CredentialCache::begin();
+  if (!CredentialCache::isFormatted()) {
+    CredentialCache::format();
+  }
+  String ssid = WiFi.SSID(mWlanNumberFromScan);
   if (WiFi.encryptionType(mWlanNumberFromScan) != ENC_TYPE_NONE) {
-    promptForPassword();
+    if (CredentialCache::hasPassphrase(ssid)) {
+      String passphrase = CredentialCache::getPassphrase(ssid);
+      connectToWiFi(passphrase);
+    } else {
+      promptForPassword();
+    }
   } else {
     connectToWiFi("");
   }
 }
 
 void ConnectProcess::promptForPassword() {
+  String ssid = WiFi.SSID(mWlanNumberFromScan);
   String screenPrompt = PROMPT_MESSAGE;
   screenPrompt += String('\n');
-  screenPrompt += WiFi.SSID(mWlanNumberFromScan);
+  screenPrompt += ssid;
 
   Screen *tempScreen = this->mScreen;
-  Screen *txtInScreen = new TextInputScreen(mDisplay, screenPrompt);
+  TextInputScreen *txtInScreen = new TextInputScreen(mDisplay, screenPrompt);
+
+  // set the password we have saved
+  if (CredentialCache::hasPassphrase(ssid)) {
+    String passphrase = CredentialCache::getPassphrase(ssid);
+    txtInScreen->setInputString(passphrase);
+  }
   this->setScreen(txtInScreen);
 
   if (tempScreen != NULL) {
@@ -39,6 +58,8 @@ void ConnectProcess::promptForPassword() {
 void ConnectProcess::connectToWiFi(const String &passphrase) {
   String screenPrompt = CONNECTING_MESSAGE;
   String ssid = WiFi.SSID(mWlanNumberFromScan);
+
+  CredentialCache::savePassphrase(ssid, passphrase);
 
   screenPrompt += String('\n');
   screenPrompt += ssid;
@@ -81,12 +102,29 @@ void ConnectProcess::showConnectedSummary() {
   mCurrentStatus = CONNECTED;
 }
 
+void ConnectProcess::showConnectionError() {
+  Screen *tempScreen = this->mScreen;
+  MessageScreen *messageScreen =
+      new MessageScreen(mDisplay, "failed to connect", "back");
+
+  this->setScreen(messageScreen);
+
+  if (tempScreen != NULL) {
+    delete tempScreen;
+  }
+
+  mCurrentStatus = FAILED;
+}
+
 ConnectProcess::~ConnectProcess() { delete mScreen; }
 
 Process *ConnectProcess::update() {
   if (mCurrentStatus == CONNECTING && WiFi.status() == WL_CONNECTED) {
     // we are connected now, show the
     showConnectedSummary();
+  } else if (mCurrentStatus == CONNECTING &&
+             WiFi.status() == WL_CONNECT_FAILED) {
+    showConnectionError();
   }
   mScreen->draw();
 }
@@ -148,6 +186,16 @@ void ConnectProcess::handleInput(button_t button, status_t action) {
         // the process has finished, call back
 
         break;
+      }
+    }
+  } else if (mCurrentStatus == FAILED) {
+    if (action == Clicked && button == Left) {
+      if (WiFi.encryptionType(mWlanNumberFromScan) != ENC_TYPE_NONE) {
+        promptForPassword();
+      } else {
+        if (mCallback != NULL) {
+          mCallback(-1);
+        }
       }
     }
   }
