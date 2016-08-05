@@ -2,12 +2,14 @@
 Pinger::Pinger(ip_addr_t ipAddr, u16_t maxSimultaneousPings)
     : mIpAddr(ipAddr), mPingSeqNum(0), mCallback(NULL),
       mMaxSimPings(maxSimultaneousPings),
-      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0) {}
+      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0),
+      mCallbackArg(NULL) {}
 
 Pinger::Pinger(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4,
                u16_t maxSimultaneousPings)
     : mPingSeqNum(0), mCallback(NULL), mMaxSimPings(maxSimultaneousPings),
-      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0) {
+      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0),
+      mCallbackArg(NULL) {
   IP4_ADDR(&mIpAddr, ip1, ip2, ip3, ip4);
 }
 

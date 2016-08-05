@@ -35,10 +35,12 @@ private:
   ip_addr_t mIpAddr;
   u16_t mPingSeqNum;
   u16_t mCurrentId;
-  void (*mCallback)(u16_t seqNum, bool didRespond);
+  void (*mCallback)(u16_t seqNum, bool didRespond, u32_t responseTime,
+                    void *arg);
   LinkedList<ping_id_t *> *mCurrentPings;
   u16_t mMaxSimPings;
   sys_mutex_t mMutex;
+  void *mCallbackArg;
 
   static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
                         ip_addr_t *addr);
@@ -55,8 +57,13 @@ public:
   u16_t send();
   ping_id_t *getPingBySeqNo(u16_t seqNo);
   ping_id_t *getPingById(u16_t id);
-  inline void setCallback(void (*cb)(u16_t seqNum, bool receivedPong)) {
+  inline void setCallback(void (*cb)(u16_t, bool, u32_t, void *), void *arg) {
+    mCallbackArg = arg;
     mCallback = cb;
+  }
+  inline void setIp(ip_addr_t newIp) { mIpAddr = newIp; }
+  inline void setIp(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4) {
+    IP4_ADDR(&mIpAddr, ip1, ip2, ip3, ip4);
   }
 };
 
