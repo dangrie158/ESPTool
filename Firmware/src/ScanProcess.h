@@ -15,7 +15,6 @@
 class ScanProcess : public Process {
 protected:
   bool mScanComplete;
-  void (*mCallback)(int);
   SSD1306 *mDisplay;
 
   void fillList(int);
@@ -26,7 +25,6 @@ public:
   void initialize();
   Process *update();
   virtual void handleInput(button_t button, status_t action);
-  inline void setCallback(void (*callback)(int)) { mCallback = callback; }
   void startScan();
   virtual void showResult(int numNetworksDiscovered);
 };
