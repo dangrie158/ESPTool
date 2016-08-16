@@ -10,10 +10,12 @@ void MessageScreen::draw() {
   this->clear();
   this->mDisplay->setColor(WHITE);
   this->mDisplay->setFont(ArialMT_Plain_10);
+  this->mDisplay->setTextAlignment(TEXT_ALIGN_CENTER_BOTH);
+
+  this->mDisplay->drawString(SCREEN_WIDTH / 2, (DISPLAY_HEIGHT / 2) - 12,
+                             mMessage);
+
   this->mDisplay->setTextAlignment(TEXT_ALIGN_CENTER);
-
-  this->mDisplay->drawString(SCREEN_WIDTH / 2, (SCREEN_HEIGHT / 2), mMessage);
-
   this->mDisplay->drawString(
       SCREEN_WIDTH / 2, (SCREEN_START_Y + SCREEN_HEIGHT) - 12, mAckMessage);
 
