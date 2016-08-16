@@ -69,6 +69,14 @@ void drawStatusBar() {
 
   screenWidthLeft -= ICON_SDCARD_WIDTH + 4;
 
+  // draw the wifi icon if connected
+  if (WiFi.status() == WL_CONNECTED) {
+    display.drawXbm(screenWidthLeft - ICON_WIFI_WIDTH, 2, ICON_WIFI_WIDTH,
+                    ICON_WIFI_HEIGHT, icon_wifi);
+
+    screenWidthLeft -= ICON_WIFI_WIDTH + 4;
+  }
+
   // draw the current menu location
   String currentScreenName = currentProcess->getName();
   while (display.getStringWidth(currentScreenName) > screenWidthLeft) {
