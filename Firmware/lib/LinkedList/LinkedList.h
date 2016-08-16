@@ -27,7 +27,7 @@ public:
 
     Node<T> *temp = this->mRoot;
 
-    while (temp->next != 0) {
+    while (temp->next != NULL) {
       temp = temp->next;
     }
 
@@ -35,22 +35,32 @@ public:
   }
 
   T pop() {
-    Node<T> *temp = this->mRoot;
+    if (this->mRoot == NULL) {
+      return NULL;
+    }
 
-    while (temp->next != NULL && temp->next->next != NULL) {
+    Node<T> *temp = this->mRoot;
+    Node<T> *prev = NULL;
+
+    while (temp->next != NULL) {
+      prev = temp;
       temp = temp->next;
     }
 
-    T data = temp->next->value;
-    delete temp->next;
-    temp->next = NULL;
+    T data = temp->value;
+    delete temp;
+    if (prev != NULL) {
+      prev->next = NULL;
+    } else {
+      mRoot = NULL;
+    }
     return data;
   }
 
   int size() {
     int counter = 0;
     Node<T> *temp = mRoot;
-    while (temp->next != 0) {
+    while (temp != 0) {
       temp = temp->next;
       counter++;
     }
@@ -73,13 +83,15 @@ public:
   }
 
   void clear() {
-    int size = this->size();
-    while (size-- > 0) {
-      delete this->pop();
+    Node<T> *temp = mRoot;
+    while (temp != NULL) {
+      Node<T> *next = temp->next;
+      delete temp;
+      temp = next;
     }
   }
 
-  void del(T data) {
+  void remove(T data) {
     Node<T> *temp = this->mRoot;
     if (temp == NULL) {
       return;
@@ -87,7 +99,7 @@ public:
 
     Node<T> *prev = NULL;
 
-    while (temp->next != NULL) {
+    while (temp != NULL) {
       if (temp->value == data) {
         if (prev == NULL) {
           Node<T> *next = temp->next;
