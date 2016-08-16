@@ -3208,7 +3208,7 @@ Please make sure your boards conform to these design rules.</description>
 <wire x1="25.75" y1="24.25" x2="25.75" y2="22.5" width="0.3048" layer="1"/>
 <wire x1="18.5" y1="26.75" x2="19.5" y2="25.75" width="0.3048" layer="1"/>
 <wire x1="24.25" y1="25.75" x2="25.75" y2="24.25" width="0.3048" layer="1"/>
-<wire x1="19.5" y1="25.75" x2="24.25" y2="25.75" width="0" layer="19" extent="1-1"/>
+<wire x1="19.5" y1="25.75" x2="24.25" y2="25.75" width="0.3048" layer="1"/>
 </signal>
 <signal name="N$4">
 <contactref element="D1" pad="A"/>
