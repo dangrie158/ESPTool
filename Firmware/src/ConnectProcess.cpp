@@ -183,8 +183,9 @@ void ConnectProcess::handleInput(button_t button, status_t action) {
         screen->cursorDown(1);
         break;
       case Left:
-        // the process has finished, call back
-
+        if (mCallback != NULL) {
+          mCallback(0);
+        }
         break;
       }
     }
