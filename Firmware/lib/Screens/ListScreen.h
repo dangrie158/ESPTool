@@ -52,6 +52,8 @@ public:
     return mItems->at(mScrollOffset + mSelectedElementOnScreen);
   }
 
+  inline LinkedList<ListItem *> *items() { return mItems; }
+
   inline void setSelectable(bool isSelectable) { mSelectable = isSelectable; }
 };
 
