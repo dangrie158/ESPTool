@@ -41,13 +41,6 @@ void CredentialCache::savePassphrase(const String &ssid,
 
   File passFile = SPIFFS.open(filePath, "w+");
 
-  Serial.println("-------");
-  Serial.println(filePath);
-  Serial.println(ssid);
-  Serial.println(passphrase);
-  Serial.println(passFile.name());
-  Serial.println("-------");
-
   passFile.println(passphrase);
 
   passFile.close();
