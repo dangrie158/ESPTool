@@ -8,6 +8,7 @@
 #include "ESP8266WiFi.h"
 #include "OccupationProcess.h"
 #include "SSD1306.h"
+#include "ScanHostsProcess.h"
 #include "ScanProcess.h"
 
 // Include custom images
@@ -26,7 +27,6 @@ Ticker buttonUpdater;
 
 ScanProcess scanner(&display);
 Process *currentProcess = &scanner;
-Pinger pinger(192, 168, 1, 20);
 
 void updateButton() {
   down.update();
@@ -104,14 +104,14 @@ void setup() {
 
   scanner.setCallback([currentProcess](int selectedLan) {
     currentProcess = new ConnectProcess(&display, selectedLan);
-  });
-
-  Serial.println(String("Initi:") + pinger.initialize());
-
-  pinger.setCallback([](u16_t seqNo, bool didReceiveEcho) {
-    Serial.print(seqNo);
-    Serial.print(" ");
-    Serial.println(didReceiveEcho);
+    currentProcess->setCallback([currentProcess](int status) {
+      if (status == 0) {
+        currentProcess = new ScanHostsProcess(&display);
+        currentProcess->initialize();
+      } else {
+        currentProcess = &scanner;
+      }
+    });
   });
 }
 
@@ -129,13 +129,6 @@ void handleInput() {
 void loop() {
   display.clear();
   drawStatusBar();
-
-  if (WiFi.status() == WL_CONNECTED) {
-    u16_t status = pinger.send();
-    if (status != 65535) {
-      Serial.println(status);
-    }
-  }
 
   currentProcess->update();
 
