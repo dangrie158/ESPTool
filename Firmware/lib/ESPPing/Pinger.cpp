@@ -1,20 +1,22 @@
 #include "Pinger.h"
-Pinger::Pinger(ip_addr_t ipAddr, u16_t maxSimultaneousPings)
-    : mIpAddr(ipAddr), mPingSeqNum(0), mCallback(NULL),
-      mMaxSimPings(maxSimultaneousPings),
+Pinger::Pinger(u16_t maxSimultaneousPings)
+    : mPingSeqNum(0), mCallback(NULL), mMaxSimPings(maxSimultaneousPings),
       mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0),
       mCallbackArg(NULL) {}
 
-Pinger::Pinger(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4,
-               u16_t maxSimultaneousPings)
-    : mPingSeqNum(0), mCallback(NULL), mMaxSimPings(maxSimultaneousPings),
-      mCurrentPings(new LinkedList<ping_id_t *>), mCurrentId(0),
-      mCallbackArg(NULL) {
-  IP4_ADDR(&mIpAddr, ip1, ip2, ip3, ip4);
-}
-
 Pinger::~Pinger() {
-  delete mCurrentPings;
+  if (mPingPcb != NULL) {
+    raw_remove(mPingPcb);
+  }
+
+  int i = mCurrentPings->size();
+  while (i--) {
+    ping_id_t *ping = mCurrentPings->pop();
+    sys_untimeout(Pinger::ping_timeout, ping);
+    delete ping;
+  }
+
+  // delete mCurrentPings;
   sys_mutex_free(&mMutex);
 }
 
@@ -63,17 +65,18 @@ u8_t Pinger::ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
     ping_id_t *ping = self->getPingBySeqNo(seqNo);
     if (ping != NULL) {
 
+      ip_addr_t ip = ping->ip;
       u32_t responseTime = recvTime - ping->pingTime;
 
       // call the callback
       if (self->mCallback != NULL) {
-        self->mCallback(seqNo, true, responseTime, self->mCallbackArg);
+        self->mCallback(ip, seqNo, true, responseTime, self->mCallbackArg);
       }
 
       // clear the timeout
-      sys_untimeout(ping_timeout, ping);
+      sys_untimeout(Pinger::ping_timeout, ping);
       // clean up for this ping
-      self->mCurrentPings->del(ping);
+      self->mCurrentPings->remove(ping);
       delete ping;
     }
     // unock the mutex
@@ -99,7 +102,7 @@ ping_id_t *Pinger::getPingBySeqNo(u16_t seqNo) {
     }
     currentPing = this->mCurrentPings->at(++i);
   }
-  return currentPing;
+  return NULL;
 }
 
 ping_id_t *Pinger::getPingById(u16_t id) {
@@ -112,7 +115,7 @@ ping_id_t *Pinger::getPingById(u16_t id) {
     }
     currentPing = this->mCurrentPings->at(++i);
   }
-  return currentPing;
+  return NULL;
 }
 
 void Pinger::ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
@@ -136,7 +139,7 @@ void Pinger::ping_prepare_echo(struct icmp_echo_hdr *iecho, u16_t len,
   iecho->chksum = inet_chksum(iecho, len);
 }
 
-u16_t Pinger::send() {
+u16_t Pinger::send(ip_addr_t ip) {
   struct icmp_echo_hdr *iecho;
   size_t ping_size = sizeof(struct icmp_echo_hdr) + PING_DATA_SIZE;
 
@@ -152,7 +155,7 @@ u16_t Pinger::send() {
     nextId += 1;
     nextId %= mMaxSimPings;
     ping = this->getPingById(nextId);
-  } while (ping != NULL && --freeSlots);
+  } while (ping != NULL && --freeSlots > 0);
 
   // if the sequence number is currently in use, we have no more free pings
   // available, another ping has to respond or timeout first.
@@ -176,6 +179,7 @@ u16_t Pinger::send() {
     id->pinger = this;
     id->id = nextId;
     id->seqNum = nextSeqNo;
+    id->ip = ip;
     this->mCurrentId = nextId;
 
     // mark the current sequence number as not available
@@ -197,7 +201,7 @@ u16_t Pinger::send() {
 
     // send the request
     id->pingTime = sys_now();
-    raw_sendto(mPingPcb, p, &mIpAddr);
+    raw_sendto(mPingPcb, p, &ip);
 
     // set the return value;
     seqNo = this->mPingSeqNum;
@@ -214,7 +218,12 @@ void Pinger::ping_timeout(void *arg) {
   ping_id_t *id = static_cast<ping_id_t *>(arg);
 
   Pinger *pinger = id->pinger;
+  if (pinger == NULL) {
+    // delete id;
+    return;
+  }
   u16_t seqNo = id->seqNum;
+  ip_addr_t ip = id->ip;
 
   // lock the mutex before checking the state
   sys_mutex_lock(&mMutex);
@@ -223,11 +232,11 @@ void Pinger::ping_timeout(void *arg) {
 
     // call the callback
     if (pinger->mCallback != NULL) {
-      pinger->mCallback(seqNo, false, -1, pinger->mCallbackArg);
+      pinger->mCallback(ip, seqNo, false, -1, pinger->mCallbackArg);
     }
 
     // free the state of the current sequence number
-    pinger->mCurrentPings->del(ping);
+    pinger->mCurrentPings->remove(ping);
     delete ping;
   }
 

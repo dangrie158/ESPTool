@@ -23,6 +23,7 @@
 class Pinger;
 
 typedef struct {
+  ip_addr_t ip;
   u16_t id;
   u16_t seqNum;
   Pinger *pinger;
@@ -32,14 +33,13 @@ typedef struct {
 class Pinger {
 private:
   struct raw_pcb *mPingPcb;
-  ip_addr_t mIpAddr;
   u16_t mPingSeqNum;
   u16_t mCurrentId;
-  void (*mCallback)(u16_t seqNum, bool didRespond, u32_t responseTime,
-                    void *arg);
+  void (*mCallback)(ip_addr_t ip, u16_t seqNum, bool didRespond,
+                    u32_t responseTime, void *arg);
   LinkedList<ping_id_t *> *mCurrentPings;
   u16_t mMaxSimPings;
-  sys_mutex_t mMutex;
+  static sys_mutex_t mMutex;
   void *mCallbackArg;
 
   static u8_t ping_recv(void *arg, struct raw_pcb *pcb, struct pbuf *p,
@@ -49,21 +49,16 @@ private:
   static void ping_timeout(void *arg);
 
 public:
-  Pinger(ip_addr_t ipAddr, u16_t maxSimultaneousPings = 1);
-  Pinger(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4,
-         u16_t maxSimultaneousPings = 1);
+  Pinger(u16_t maxSimultaneousPings = 1);
   ~Pinger();
   err_t initialize();
-  u16_t send();
+  u16_t send(ip_addr_t ip);
   ping_id_t *getPingBySeqNo(u16_t seqNo);
   ping_id_t *getPingById(u16_t id);
-  inline void setCallback(void (*cb)(u16_t, bool, u32_t, void *), void *arg) {
+  inline void setCallback(void (*cb)(ip_addr_t, u16_t, bool, u32_t, void *),
+                          void *arg) {
     mCallbackArg = arg;
     mCallback = cb;
-  }
-  inline void setIp(ip_addr_t newIp) { mIpAddr = newIp; }
-  inline void setIp(u8_t ip1, u8_t ip2, u8_t ip3, u8_t ip4) {
-    IP4_ADDR(&mIpAddr, ip1, ip2, ip3, ip4);
   }
 };
 
